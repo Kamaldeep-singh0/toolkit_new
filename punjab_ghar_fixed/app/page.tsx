@@ -12,30 +12,26 @@ export default function HomePage() {
           <span className="brand-icon">🏠</span>
           <span>
             <strong>{brand}</strong>
-            <small>Ghar banane da asaan toolkit · ₹99</small>
+            <small>For Punjab home builders</small>
           </span>
         </a>
-        <a className="top-buy" href={paymentUrl}>Kharido ₹99</a>
+        <a className="top-buy" href={paymentUrl}>Buy ₹99</a>
       </header>
 
       <main>
+
         {/* HERO */}
         <section className="hero">
           <div className="hero-content">
-            <p className="pill">Punjab de ghar builders vaaste</p>
-            <h1>Lakhs lagaun ton pehle, ih 3 gallan zaroor jaano.</h1>
+            <p className="pill">3-in-1 Construction Bundle</p>
+            <h1>Stop your contractor from fooling you.</h1>
             <p className="subtext">
-              <strong>Mistakes PDF + Printable Checklist + Grey Structure Calculator</strong> — tino cheezaan ik ₹99 bundle vich.
-              Grey structure di planning galat hove taan baad vich lakhon di barbadi hundi hai.
+              Most Punjab homeowners lose <strong>₹2–5 lakh</strong> to overcharging and avoidable mistakes.
+              This ₹99 toolkit tells you exactly what to check — before it costs you.
             </p>
             <div className="cta-stack">
-              <a className="btn btn-primary" href={paymentUrl}>Toolkit kharido sirf ₹99 vich</a>
-              <a className="btn btn-soft" href={`https://wa.me/${supportWhatsapp}?text=Mujhe%20Punjab%20Ghar%20Toolkit%20ke%20baare%20mein%20jaanna%20hai`} target="_blank" rel="noopener noreferrer">WhatsApp te poochho</a>
-            </div>
-            <div className="trust-strip">
-              <span>🔒 Razorpay secure payment</span>
-              <span>📧 Email delivery automatic</span>
-              <span>📱 Mobile-friendly guide</span>
+              <a className="btn btn-primary" href={paymentUrl}>Get the Toolkit — ₹99</a>
+              <a className="btn btn-soft" href={`https://wa.me/${supportWhatsapp}`} target="_blank" rel="noopener noreferrer">Ask on WhatsApp</a>
             </div>
           </div>
 
@@ -50,7 +46,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="preview-card">
-              <b>Checklist PDF</b>
+              <b>Checklist</b>
               <div className="preview-mock">
                 <span className="mock-line" />
                 <span className="mock-line short" />
@@ -63,121 +59,59 @@ export default function HomePage() {
 
         {/* WHAT YOU GET */}
         <section className="section">
-          <p className="pill">Tuhanu ki milega</p>
-          <h2>Tino tools ik jagah</h2>
+          <p className="pill">What's inside</p>
           <div className="grid-3">
             <article className="card">
-              <h3>1. Ghar Mistakes PDF</h3>
-              <p>Punjab vich ghar banande time jo sabton vaddi galtiyan hundi hain — foundation, RCC, plaster, plumbing — saari detail vich Punjabi/Hindi vich samjhaya.</p>
+              <h3>Mistakes PDF</h3>
+              <p>The 12 most costly construction mistakes in Punjab homes — with photos, explanations, and how to avoid each one.</p>
             </article>
             <article className="card">
-              <h3>2. Printable Site Checklist</h3>
-              <p>Foundation ton lekar final finishing tak — har stage di checklist. Print karo te site te lejaao. Contractor te nazar rakho.</p>
+              <h3>Site Checklist</h3>
+              <p>Print it. Take it to site. Check foundation, RCC, plumbing, electrical, plaster — stage by stage. Nothing slips.</p>
             </article>
             <article className="card">
-              <h3>3. Grey Structure Calculator</h3>
-              <p>Apna plot size daalo te rough estimate milega — cement, steel, sand, bricks sabda. Overcharge pakad sakoge contractor da.</p>
+              <h3>Cost Calculator</h3>
+              <p>Enter your plot size. Get a real grey structure estimate using Punjab material rates. Catch overcharging instantly.</p>
             </article>
           </div>
         </section>
 
-        {/* SOCIAL PROOF */}
-        <section className="section" style={{ background: "#f8f9fc", borderRadius: 16, padding: "32px 24px" }}>
-          <p className="pill">Loki keh rahe hain</p>
-          <div className="grid-3">
-            <article className="card">
-              <p style={{ fontSize: 15 }}>"Calculator ne mera contractor da overcharge 40,000 rupee pakad leya. Best ₹99 spend kita."</p>
-              <p style={{ fontSize: 13, color: "#667085", marginTop: 8 }}>— Gurpreet Singh, Ludhiana</p>
-            </article>
-            <article className="card">
-              <p style={{ fontSize: 15 }}>"Checklist PDF leke site te gayi taan contractor ne ek dum sahi kaam kita, koi bahaana nahi."</p>
-              <p style={{ fontSize: 13, color: "#667085", marginTop: 8 }}>— Manpreet Kaur, Amritsar</p>
-            </article>
-            <article className="card">
-              <p style={{ fontSize: 15 }}>"Mistakes PDF padhke meri foundation di galti samajh aayi samay te. Bahut useful."</p>
-              <p style={{ fontSize: 13, color: "#667085", marginTop: 8 }}>— Harjinder, Patiala</p>
-            </article>
-          </div>
-        </section>
-
-        {/* OFFER / BUY */}
+        {/* OFFER */}
         <section className="section offer" id="buy">
-          <p className="pill">Limited time launch price</p>
-          <h2>Complete toolkit sirf ₹99 vich</h2>
+          <p className="pill">Launch price</p>
+          <h2>All three for ₹99</h2>
           <div className="price">
             <span className="cut">₹499</span>
             <strong>₹99</strong>
-            <small>one-time · koi subscription nahi</small>
+            <small>one-time · instant delivery</small>
           </div>
           <ul className="clean-list">
-            <li>✅ Mistakes PDF (ghar banane di sabton common galtiyan)</li>
-            <li>✅ Printable Site Checklist (har stage ke liye)</li>
-            <li>✅ Grey Structure Calculator (Excel, Punjab ratios ke saath)</li>
-            <li>✅ Razorpay secure checkout (UPI, cards, Net Banking)</li>
-            <li>✅ Payment ke baad automatic email delivery</li>
-            <li>✅ WhatsApp support available</li>
+            <li>Mistakes PDF — avoid costly errors</li>
+            <li>Printable Site Checklist — for every stage</li>
+            <li>Grey Structure Calculator — catch overcharging</li>
+            <li>Download link sent to your email instantly</li>
           </ul>
-          <a className="btn btn-primary" href={paymentUrl}>Hune Kharido — ₹99 Only</a>
-          <p style={{ marginTop: 14, fontSize: 13, color: "#667085" }}>
-            Payment karne ke baad download link Razorpay pe ditti email te automatic aayega.
+          <a className="btn btn-primary" href={paymentUrl}>Buy Now — ₹99</a>
+          <p style={{ marginTop: 14, fontSize: 13, color: "#94a3b8" }}>
+            Secure payment via Razorpay · UPI, cards, Net Banking accepted
           </p>
         </section>
 
-        {/* HOW IT WORKS */}
-        <section className="section">
-          <p className="pill">Delivery kidan hundi hai</p>
-          <div className="grid-3">
-            <article className="card">
-              <h3>1. Pay Karo</h3>
-              <p>₹99 da payment Razorpay Payment Page te karo — UPI, card ya Net Banking naal.</p>
-            </article>
-            <article className="card">
-              <h3>2. Auto Verify</h3>
-              <p>Razorpay payment success Vercel server te verify hunda hai automatically.</p>
-            </article>
-            <article className="card">
-              <h3>3. Download Karo</h3>
-              <p>Tumhari email te ek private download link aaunda hai. Tino files download karo.</p>
-            </article>
-          </div>
-        </section>
-
-        {/* FAQ */}
-        <section className="section">
-          <p className="pill">Sawaal jawab</p>
-          <h2>FAQ</h2>
-          <div className="grid-2">
-            <article className="card">
-              <h3>Payment karne ke baad email nahi aya?</h3>
-              <p>1–2 minute wait karo. Spam folder check karo. Phir bhi nahi aya taan WhatsApp te message karo — payment ID ke saath.</p>
-            </article>
-            <article className="card">
-              <h3>Refund milega kya?</h3>
-              <p>Yeh digital product hai, isliye generally refund nahi milta. Par koi technical problem hove taan support naal contact karo.</p>
-            </article>
-            <article className="card">
-              <h3>Calculator sahi quantities deta hai?</h3>
-              <p>Yeh planning ke liye rough estimate hai. Final quantities engineer ya contractor ton confirm karwao. Educational tool hai.</p>
-            </article>
-            <article className="card">
-              <h3>Download link kitne dino tak chalega?</h3>
-              <p>Download link 7 din valid rehta hai. Is waqt vich saari files download karke save karo.</p>
-            </article>
-          </div>
-        </section>
-
-        {/* SUPPORT */}
+        {/* FAQ — minimal */}
         <section className="section grid-2">
           <div className="card">
-            <h3>Important note</h3>
-            <p>Ih ek educational planning toolkit hai. Final quantities, structure safety te actual cost engineer ya architect ton zaroor verify karwao.</p>
+            <h3>How do I get the files?</h3>
+            <p>After payment, a download link is sent to your email automatically. Usually within 2 minutes.</p>
           </div>
           <div className="card">
-            <h3>Madad chahidi hai?</h3>
-            <p>Payment ho gayi par email nahi aya? Ya koi sawaal hai? WhatsApp te message karo.</p>
-            <p><a className="btn btn-soft" href={`https://wa.me/${supportWhatsapp}`} target="_blank" rel="noopener noreferrer">WhatsApp Support</a></p>
+            <h3>Didn't get the email?</h3>
+            <p>Check spam first. Still missing? WhatsApp us with your payment ID — we'll sort it immediately.</p>
+            <p style={{ marginTop: 12 }}>
+              <a className="btn btn-soft" style={{ minHeight: 44, fontSize: 14 }} href={`https://wa.me/${supportWhatsapp}`} target="_blank" rel="noopener noreferrer">WhatsApp Support</a>
+            </p>
           </div>
         </section>
+
       </main>
 
       <Footer />
@@ -194,7 +128,7 @@ function Footer() {
         <a href="/terms">Terms</a>
         <a href="/contact">Contact</a>
       </div>
-      <p>© {new Date().getFullYear()} Punjab Ghar Toolkit. Digital educational product.</p>
+      <p>© {new Date().getFullYear()} Punjab Ghar Toolkit. Educational digital product.</p>
     </footer>
   );
 }
