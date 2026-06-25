@@ -28,6 +28,10 @@ function expiresAt() {
   return date.toISOString();
 }
 
+function isDuplicateKeyError(error: { code?: string; message?: string } | null) {
+  return error?.code === "23505" || error?.message?.toLowerCase().includes("duplicate key");
+}
+
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature = request.headers.get("x-razorpay-signature");
@@ -91,28 +95,66 @@ export async function POST(request: NextRequest) {
       .select("id,email,token,email_sent_at")
       .single<PurchaseRow>();
 
-    if (insertError) {
+    if (insertError && !isDuplicateKeyError(insertError)) {
       return NextResponse.json({ ok: false, error: insertError.message }, { status: 500 });
     }
 
-    purchase = inserted;
+    if (insertError && isDuplicateKeyError(insertError)) {
+      const { data: duplicatePurchase, error: duplicateFetchError } = await supabaseAdmin
+        .from("purchases")
+        .select("id,email,token,email_sent_at")
+        .eq("razorpay_payment_id", data.paymentId)
+        .maybeSingle<PurchaseRow>();
+
+      if (duplicateFetchError) {
+        return NextResponse.json({ ok: false, error: duplicateFetchError.message }, { status: 500 });
+      }
+
+      purchase = duplicatePurchase;
+    } else {
+      purchase = inserted;
+    }
   }
 
-  if (purchase.email && !purchase.email_sent_at) {
+  if (!purchase) {
+    return NextResponse.json({ ok: false, error: "Purchase not found after payment save" }, { status: 500 });
+  }
+
+  const { data: claimed, error: claimError } = await supabaseAdmin
+    .from("purchases")
+    .update({ email_sent_at: new Date().toISOString() })
+    .eq("id", purchase.id)
+    .is("email_sent_at", null)
+    .select("id,email,token,email_sent_at")
+    .maybeSingle<PurchaseRow>();
+
+  if (claimError) {
+    return NextResponse.json({ ok: false, error: claimError.message }, { status: 500 });
+  }
+
+  if (!claimed) {
+    return NextResponse.json({ ok: true, duplicate: true, reason: "Email already sent or already being sent" });
+  }
+
+  if (claimed.email) {
     const emailResult = await sendToolkitEmail({
-      to: purchase.email,
-      token: purchase.token,
-      paymentId: data.paymentId
+      to: claimed.email,
+      token: claimed.token,
+      paymentId: data.paymentId,
+      siteUrl: request.nextUrl.origin
     });
 
     if (emailResult.error) {
-      return NextResponse.json({ ok: false, error: "Payment saved, email failed", details: emailResult.error }, { status: 500 });
-    }
+      await supabaseAdmin
+        .from("purchases")
+        .update({ email_sent_at: null })
+        .eq("id", claimed.id);
 
-    await supabaseAdmin
-      .from("purchases")
-      .update({ email_sent_at: new Date().toISOString() })
-      .eq("id", purchase.id);
+      return NextResponse.json(
+        { ok: false, error: "Payment saved, email failed", details: emailResult.error },
+        { status: 500 }
+      );
+    }
   }
 
   return NextResponse.json({ ok: true });

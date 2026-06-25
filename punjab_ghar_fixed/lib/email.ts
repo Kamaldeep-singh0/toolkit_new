@@ -5,6 +5,7 @@ type SendToolkitEmailInput = {
   to: string;
   token: string;
   paymentId: string;
+  siteUrl?: string;
 };
 
 function sendSmtpEmail(options: {
@@ -25,13 +26,20 @@ function sendSmtpEmail(options: {
   });
 }
 
-export async function sendToolkitEmail({ to, token, paymentId }: SendToolkitEmailInput): Promise<{ error: string | null }> {
-  const siteUrl = requiredEnv("NEXT_PUBLIC_SITE_URL").replace(/\/$/, "");
+export async function sendToolkitEmail({ to, token, paymentId, siteUrl: inputSiteUrl }: SendToolkitEmailInput): Promise<{ error: string | null }> {
+  const fallbackSiteUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "";
+  const siteUrl = inputSiteUrl || process.env.NEXT_PUBLIC_SITE_URL || fallbackSiteUrl;
+
+  if (!siteUrl || siteUrl.trim() === "") {
+    throw new Error("Missing site URL. Set NEXT_PUBLIC_SITE_URL in Vercel.");
+  }
+
+  const cleanSiteUrl = siteUrl.replace(/\/$/, "");
   const brand = optionalEnv("NEXT_PUBLIC_BRAND_NAME", "Punjab Ghar Toolkit");
   const gmailUser = requiredEnv("GMAIL_USER");
   const gmailPassword = requiredEnv("GMAIL_APP_PASSWORD");
   const fromName = optionalEnv("GMAIL_FROM_NAME", brand);
-  const downloadUrl = `${siteUrl}/download/${token}`;
+  const downloadUrl = `${cleanSiteUrl}/download/${token}`;
 
   const subject = `Your ${brand} download link`;
   const html = `
