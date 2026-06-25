@@ -11,12 +11,13 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",
     "next": "^15.1.6",
+    "nodemailer": "^6.9.16",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "resend": "^4.1.2"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",
+    "@types/nodemailer": "^6.4.17",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
     "eslint": "^9.18.0",
