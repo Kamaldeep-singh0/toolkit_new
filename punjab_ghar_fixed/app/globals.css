@@ -98,7 +98,7 @@ h3 { font-size: 22px; letter-spacing: -0.025em; }
 .trust-strip { margin: 18px auto 0; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; max-width: 540px; }
 .trust-strip span { background: rgba(255,255,255,.78); border: 1px solid var(--border); color: var(--muted); border-radius: 999px; padding: 7px 10px; font-size: 12px; font-weight: 800; }
 
-.hero-preview { display: grid; gap: 14px; }
+.hero-preview { display: grid; gap: 14px; grid-template-columns: repeat(3, 1fr); }
 .preview-card { background: white; border: 1px solid var(--border); border-radius: 28px; padding: 20px; box-shadow: var(--shadow); }
 .preview-card:nth-child(1) { transform: rotate(-1deg); }
 .preview-card:nth-child(2) { transform: rotate(1deg); }
@@ -140,7 +140,6 @@ h3 { font-size: 22px; letter-spacing: -0.025em; }
   .hero-content { text-align: left; padding-top: 0; }
   .cta-stack { margin-left: 0; grid-template-columns: 1fr .84fr; max-width: 640px; }
   .trust-strip { justify-content: flex-start; margin-left: 0; }
-  .hero-preview { grid-template-columns: 1fr .82fr; align-items: center; }
   .preview-card:nth-child(2) { margin-top: 80px; }
   .section { margin-top: 70px; }
   .grid-3 { grid-template-columns: repeat(3, 1fr); }

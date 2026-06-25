@@ -23,8 +23,8 @@ export default function HomePage() {
         {/* HERO */}
         <section className="hero">
           <div className="hero-content">
-            <p className="pill">3-in-1 Construction Bundle</p>
-            <h1>Stop your contractor from fooling you.</h1>
+            <p className="pill">Take control of your home</p>
+            <h1>3-in-1 Construction Bundle</h1>
             <p className="subtext">
               Most Punjab homeowners lose <strong>₹2–5 lakh</strong> to overcharging and avoidable mistakes.
               This ₹99 toolkit tells you exactly what to check — before it costs you.
@@ -35,26 +35,20 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="hero-preview" aria-hidden="true">
-            <div className="preview-card">
-              <b>Calculator</b>
-              <div className="preview-mock">
-                <span className="mock-line short" />
-                <span className="mock-line mid" />
-                <span className="mock-line" />
-                <span className="mock-line mid" />
-              </div>
-            </div>
-            <div className="preview-card">
-              <b>Checklist</b>
-              <div className="preview-mock">
-                <span className="mock-line" />
-                <span className="mock-line short" />
-                <span className="mock-line mid" />
-                <span className="mock-line" />
-              </div>
-            </div>
-          </div>
+         <div className="hero-preview">
+  <div className="preview-card">
+    <b>Calculator</b>
+    <img src="/calculator-preview.png" alt="Cost Calculator preview" style={{ width: "100%", borderRadius: 16, marginTop: 10, display: "block" }} />
+  </div>
+  <div className="preview-card">
+    <b>Checklist</b>
+    <img src="/checklist-preview.png" alt="Site Checklist preview" style={{ width: "100%", borderRadius: 16, marginTop: 10, display: "block" }} />
+  </div>
+  <div className="preview-card">
+    <b>Mistakes PDF</b>
+    <img src="/mistakes-preview.png" alt="Mistakes PDF preview" style={{ width: "100%", borderRadius: 16, marginTop: 10, display: "block" }} />
+  </div>
+</div>
         </section>
 
         {/* WHAT YOU GET */}
@@ -63,7 +57,7 @@ export default function HomePage() {
           <div className="grid-3">
             <article className="card">
               <h3>Mistakes PDF</h3>
-              <p>The 12 most costly construction mistakes in Punjab homes — with photos, explanations, and how to avoid each one.</p>
+              <p>The 9 most costly construction mistakes in Punjab homes — with photos, explanations, and how to avoid each one.</p>
             </article>
             <article className="card">
               <h3>Site Checklist</h3>
@@ -91,7 +85,7 @@ export default function HomePage() {
             <li>Grey Structure Calculator — catch overcharging</li>
             <li>Download link sent to your email instantly</li>
           </ul>
-          <a className="btn btn-primary" href={paymentUrl}>Buy Now — ₹99</a>
+          <a className="btn btn-primary align:center" href={paymentUrl}>Buy Now — ₹99</a>
           <p style={{ marginTop: 14, fontSize: 13, color: "#94a3b8" }}>
             Secure payment via Razorpay · UPI, cards, Net Banking accepted
           </p>
