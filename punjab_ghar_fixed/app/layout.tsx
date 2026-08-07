@@ -9,7 +9,19 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <footer className="footer">
+          <p>&copy; 2026 Punjab Ghar Toolkit. All rights reserved.</p>
+          <p>Made with love by The.Ravi.Saini</p>
+          <div className="footer-links">
+            <a href="/terms">Terms</a>
+            <a href="/privacy-policy">Privacy</a>
+            <a href="/refund-policy">Refund Policy</a>
+            <a href="/contact">Contact</a>
+          </div>
+        </footer>
+      </body>
     </html>
   );
 }
