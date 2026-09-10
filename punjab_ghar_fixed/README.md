@@ -1,255 +1,344 @@
-# Punjab Ghar Toolkit — Vercel Secure Website
+# Punjab Ghar Toolkit — Website Operations Guide
 
-Complete ₹99 digital product website with automatic payment verification and email delivery.
+This is the long-term reference for this website. Read this before changing payment, email, database, or Razorpay settings.
 
----
+The site sells two deliberately separate offerings:
 
-## Fixes applied in this version
+1. **Punjab Ghar Toolkit — ₹99**: a digital product delivered by email and secure download links.
+2. **1-on-1 House Construction Counselling — ₹999**: a paid, manually scheduled guidance service. It has no download and no automated calendar.
 
-1. **Payment security fix** — Webhook now requires BOTH event AND status to be valid (was using OR before which was unsafe)
-2. **Download count fix** — Atomic SQL function used to avoid race conditions
-3. **Manual email resend** — New `/api/resend-email` route added for when customers miss the email
-4. **Success page improved** — Clear instructions to check email after payment
-5. **Landing page** — Updated with Punjabi/Hinglish copy
+> Important: The ₹99 toolkit fulfilment flow is production logic. Do not merge counselling into it and do not make a counselling payment create a download token.
 
----
+## Contents
 
-## Step-by-step deploy guide (non-tech friendly)
+- [Architecture at a glance](#architecture-at-a-glance)
+- [Customer journeys](#customer-journeys)
+- [Pages and important files](#pages-and-important-files)
+- [Environment variables](#environment-variables)
+- [First-time setup](#first-time-setup)
+- [Razorpay setup](#razorpay-setup)
+- [How payment processing works](#how-payment-processing-works)
+- [Email and download delivery](#email-and-download-delivery)
+- [Database and storage](#database-and-storage)
+- [Daily operations](#daily-operations)
+- [Deployment and updating](#deployment-and-updating)
+- [Troubleshooting](#troubleshooting)
+- [Safety rules for future changes](#safety-rules-for-future-changes)
 
-### What you need (all free to start)
+## Architecture at a glance
 
-- GitHub account (github.com)
-- Vercel account (vercel.com) — login with GitHub
-- Supabase account (supabase.com) — free tier
-- Resend account (resend.com) — free tier sends 100 emails/day
-- Razorpay account (razorpay.com) — already have this
+```text
+Landing page
+├─ ₹99 Toolkit CTA ────────> Razorpay Toolkit Payment Page
+│                              │
+│                              ├─ browser redirect: /success
+│                              └─ signed webhook: /api/razorpay/webhook
+│                                                   │
+│                                                   ├─ Supabase purchases row
+│                                                   ├─ random token valid 7 days
+│                                                   └─ Gmail delivery email
+│                                                        └─ /download/[token]
+│                                                             └─ 15-min Supabase file links
+│
+└─ ₹999 Counselling CTA ──> Razorpay Counselling Payment Page
+                               │
+                               ├─ browser redirect: /counselling/success
+                               └─ signed webhook: /api/razorpay/webhook
+                                                    │
+                                                    └─ Supabase counselling_bookings row
+                                                         (no token, no email, no download)
 
----
+/counselling/success ─────> WhatsApp with a pre-filled scheduling message
+                              └─ You manually agree the date and time
+```
 
-### Step 1 — Set up Supabase database
+## Customer journeys
 
-1. Go to **supabase.com** → New Project → give it any name
-2. Wait for project to create (takes ~1 minute)
-3. In the left menu click **SQL Editor**
-4. Click **New Query**
-5. Open the file `sql/supabase-schema.sql` from this project (open in Notepad/VS Code)
-6. Copy ALL the text from that file
-7. Paste it into the SQL Editor on Supabase
-8. Click **Run**
-9. You should see "Success" — this creates the purchases table and the atomic counter function
+### ₹99 Toolkit
 
-**Now create private file storage:**
-1. In Supabase left menu click **Storage**
-2. Click **New bucket**
-3. Name it exactly: `toolkit-files`
-4. Toggle **Public bucket** to OFF (must be private)
-5. Click Save
-6. Click into the `toolkit-files` bucket
-7. Upload your 3 files with EXACTLY these names:
-   - `mistakes-pdf.pdf`
-   - `site-checklist.pdf`
-   - `grey-structure-calculator.xlsx`
+1. Customer clicks a toolkit button on `/`.
+2. The browser opens `NEXT_PUBLIC_RAZORPAY_PAYMENT_PAGE_URL`.
+3. Razorpay redirects the browser to `/success`. This page only tells the customer to check their email; it does **not** prove payment.
+4. Razorpay sends a signed webhook to `/api/razorpay/webhook`.
+5. The server verifies the Razorpay signature and accepts only successful payment events/statuses.
+6. The server creates or reuses a row in `purchases`, generates a random download token, and sends the toolkit email once.
+7. The customer opens `/download/[token]`. The token is valid for seven days.
+8. Each file button creates a private Supabase signed URL that lasts 15 minutes.
 
-**Get your Supabase credentials:**
-1. In Supabase go to **Project Settings** → **API**
-2. Copy **Project URL** — this is your `NEXT_PUBLIC_SUPABASE_URL`
-3. Under "Project API Keys" copy the **service_role** key (secret, not anon) — this is `SUPABASE_SERVICE_ROLE_KEY`
+### ₹999 Counselling
 
----
+1. Customer clicks `Book 30-Minute Counselling — ₹999` on `/`.
+2. The browser opens `NEXT_PUBLIC_RAZORPAY_COUNSELLING_PAYMENT_PAGE_URL`.
+3. Razorpay redirects the browser to `/counselling/success`.
+4. The success page asks the customer to schedule on WhatsApp. If Razorpay adds `payment_id` or `paymentId` to the redirect URL, it is included in the WhatsApp message; otherwise it is omitted.
+5. Razorpay sends the payment webhook to the same webhook endpoint.
+6. The server recognises counselling only when both are true:
+   - the payment-link ID equals `RAZORPAY_COUNSELLING_PAYMENT_LINK_ID`; and
+   - the received amount is ₹999 (`99900` paise).
+7. The payment is stored in `counselling_bookings`. No download token, toolkit email, calendar entry, or automatic session booking is created.
+8. You confirm the appointment manually in WhatsApp.
 
-### Step 2 — Set up Resend for emails
+## Pages and important files
 
-1. Go to **resend.com** → Create account
-2. Go to **API Keys** → Create API Key
-3. Name it "Punjab Ghar Toolkit" → Create
-4. Copy the key starting with `re_` — this is your `RESEND_API_KEY`
+| Location | Purpose |
+| --- | --- |
+| `app/page.tsx` | Main sales landing page, including both payment CTAs. |
+| `app/success/page.tsx` | Toolkit-only browser success page. |
+| `app/counselling/success/page.tsx` | Counselling-only success and WhatsApp scheduling page. |
+| `app/download/[token]/page.tsx` | Validates toolkit tokens and produces signed file links. |
+| `app/api/razorpay/webhook/route.ts` | Signed Razorpay webhook. Routes paid events to toolkit or counselling fulfilment. |
+| `app/api/resend-email/route.ts` | Admin-only way to resend a toolkit email. Despite its name, it uses the same Gmail email function. |
+| `lib/razorpay.ts` | Signature verification, payload extraction, successful-event checks, and counselling identification. |
+| `lib/email.ts` | Gmail SMTP toolkit-delivery email. |
+| `lib/supabaseAdmin.ts` | Server-only Supabase service-role client. |
+| `sql/supabase-schema.sql` | Database tables, indexes, RLS, and download-counter function. |
+| `.env.example` | Copyable configuration template. Never put secrets in Git. |
+| `app/globals.css` | Shared website styling, including counselling success-page styles. |
 
-**For testing:** Use `onboarding@resend.dev` as the from address — works immediately
+## Environment variables
 
-**For live launch:** 
-1. In Resend go to **Domains** → Add Domain
-2. Add your domain (e.g. punjabghartoolkit.com) and verify DNS records
-3. Then use `Punjab Ghar Toolkit <support@yourdomain.com>` as the from address
+Create `.env.local` for local development. In Vercel, add the same values under **Project Settings → Environment Variables**, then redeploy. Variables beginning with `NEXT_PUBLIC_` are visible to the browser; never put secrets in them.
 
----
+| Variable | Required | Used for |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | Yes | Canonical public URL used in toolkit email links when no request URL is available. |
+| `NEXT_PUBLIC_RAZORPAY_PAYMENT_PAGE_URL` | Yes | The existing ₹99 Razorpay Payment Page. |
+| `NEXT_PUBLIC_RAZORPAY_COUNSELLING_PAYMENT_PAGE_URL` | Yes for counselling | The separate ₹999 Razorpay Payment Page. |
+| `NEXT_PUBLIC_SUPPORT_WHATSAPP` | Yes | Support and counselling scheduling links. Use digits with country code, e.g. `919876543210`. A local 10-digit Indian number is also normalised to `91…` on the counselling success page. |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | Recommended | Support links and counselling fallback contact. |
+| `NEXT_PUBLIC_BRAND_NAME` | Recommended | Brand text in the site and email. |
+| `RAZORPAY_WEBHOOK_SECRET` | Yes | Secret used to validate Razorpay webhook signatures. Must exactly match the Razorpay dashboard value. |
+| `RAZORPAY_COUNSELLING_PAYMENT_LINK_ID` | Yes for counselling | Exact `plink_...` ID for the ₹999 counselling payment page/link. This prevents counselling from entering toolkit fulfilment. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL. Public, but still configure correctly. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-only Supabase key. Never expose it or prefix it with `NEXT_PUBLIC_`. |
+| `SUPABASE_STORAGE_BUCKET` | Yes | Private bucket holding toolkit files; normally `toolkit-files`. |
+| `MISTAKES_FILE_PATH` | Yes | PDF path inside the storage bucket. |
+| `CHECKLIST_FILE_PATH` | Yes | Checklist path inside the storage bucket. |
+| `CALCULATOR_FILE_PATH` | Yes | Calculator path inside the storage bucket. |
+| `GMAIL_USER` | Yes for toolkit delivery | Gmail account used to send toolkit emails. |
+| `GMAIL_APP_PASSWORD` | Yes for toolkit delivery | Gmail App Password; normal Gmail password will not work. |
+| `GMAIL_FROM_NAME` | Recommended | Display name for toolkit emails. Defaults to the brand name. |
+| `ADMIN_SECRET` | Yes for manual resend | Secret expected in the `x-admin-secret` header. |
 
-### Step 3 — Set up Razorpay Payment Page
+### Important email note
 
-1. Log into **razorpay.com** dashboard
-2. Go to **Payment Pages** → Create Payment Page
-3. Set title: "Punjab Ghar Toolkit"
-4. Set amount: ₹99
-5. In customer details, make **Email** mandatory
-6. Save/Publish the page
-7. Copy the Payment Page URL — it looks like `https://pages.razorpay.com/your-slug`
-8. This is your `NEXT_PUBLIC_RAZORPAY_PAYMENT_PAGE_URL`.
+The current code in `lib/email.ts` uses **Gmail SMTP** and requires `GMAIL_USER` plus `GMAIL_APP_PASSWORD`. The previous Resend settings are not used by the current code. Do not add or rely on Resend values for delivery unless the email implementation is deliberately changed later.
 
-For counselling, create a second ₹999 Payment Page and use its URL for `NEXT_PUBLIC_RAZORPAY_COUNSELLING_PAYMENT_PAGE_URL`.
+## First-time setup
 
----
-
-### Step 4 — Push project to GitHub
-
-1. Go to **github.com** → click the **+** button → New Repository
-2. Name it `punjab-ghar-toolkit` → Private → Create
-3. Copy the repository URL shown on screen
-
-Now open a terminal (or VS Code terminal) in the project folder and run:
+### 1. Install and run locally
 
 ```bash
 npm install
-git init
-git add .
-git commit -m "Punjab Ghar Toolkit initial"
-git branch -M main
-git remote add origin YOUR_GITHUB_URL_HERE
-git push -u origin main
+npm run dev
 ```
 
----
+Open the local URL shown by Next.js. Create `.env.local` from `.env.example` and add real values before testing payment, emails, downloads, or database calls.
 
-### Step 5 — Deploy on Vercel
+### 2. Create the Supabase database
 
-1. Go to **vercel.com** → click **Add New Project**
-2. Click **Import Git Repository** → select your `punjab-ghar-toolkit` repo
-3. Framework will auto-detect **Next.js**
-4. Click **Environment Variables** section
-5. Add these one by one (Name → Value):
+1. Create a Supabase project.
+2. Open **SQL Editor**.
+3. Run the complete contents of `sql/supabase-schema.sql`.
+4. Confirm the `purchases` and `counselling_bookings` tables exist.
+5. Confirm the `increment_download_count` function exists.
 
-```
-NEXT_PUBLIC_SITE_URL          → https://YOUR-PROJECT.vercel.app  (fill after deploy)
-NEXT_PUBLIC_RAZORPAY_PAYMENT_PAGE_URL → https://pages.razorpay.com/your-slug
-NEXT_PUBLIC_SUPPORT_WHATSAPP  → 919XXXXXXXXX  (your WhatsApp with country code)
-NEXT_PUBLIC_SUPPORT_EMAIL     → your-email@gmail.com
-NEXT_PUBLIC_BRAND_NAME        → Punjab Ghar Toolkit
-RAZORPAY_WEBHOOK_SECRET       → (fill this after Step 6 below)
-RAZORPAY_COUNSELLING_PAYMENT_LINK_ID → plink_xxx for the ₹999 counselling page
-NEXT_PUBLIC_SUPABASE_URL      → https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY     → your_supabase_service_role_key
-SUPABASE_STORAGE_BUCKET       → toolkit-files
-MISTAKES_FILE_PATH            → mistakes-pdf.pdf
-CHECKLIST_FILE_PATH           → site-checklist.pdf
-CALCULATOR_FILE_PATH          → grey-structure-calculator.xlsx
-RESEND_API_KEY                → re_xxxxxxxxxxxxxxxxxxxxx
-DELIVERY_FROM_EMAIL           → Punjab Ghar Toolkit <onboarding@resend.dev>
-DELIVERY_REPLY_TO             → your-email@gmail.com
-ADMIN_SECRET                  → (any long random string, e.g. go to generate-secret.vercel.app/32)
-```
+The schema enables Row Level Security and intentionally creates no public policies. The website accesses these tables from server code using the service-role key.
 
-6. Click **Deploy**
-7. Wait for deploy to finish — copy your Vercel URL e.g. `https://punjab-ghar-toolkit.vercel.app`
-8. Go back to Vercel → Project Settings → Environment Variables
-9. Update `NEXT_PUBLIC_SITE_URL` to your actual Vercel URL
-10. Click **Redeploy**
+### 3. Create private file storage
 
----
+1. In Supabase, create a bucket called `toolkit-files` (or use the bucket name configured in `SUPABASE_STORAGE_BUCKET`).
+2. Keep the bucket **private**.
+3. Upload the toolkit files. The default paths configured in `.env.example` are:
+   - `mistakes-pdf.pdf`
+   - `site-checklist.pdf`
+   - `grey-structure-calculator.xlsx`
+4. Keep the environment variable paths aligned with the uploaded paths exactly.
 
-### Step 6 — Add Razorpay Webhook
+### 4. Configure Gmail delivery
 
-After your site is live on Vercel:
+1. Use a Gmail account you control.
+2. Turn on two-step verification for that Google account.
+3. Create a Google **App Password** for mail.
+4. Set `GMAIL_USER` to the Gmail address and `GMAIL_APP_PASSWORD` to that app password.
+5. Make a real small-value toolkit purchase and verify the email reaches Inbox/Promotions/Spam.
 
-1. Log into Razorpay dashboard
-2. Go to **Account & Settings** → **Webhooks**
-3. Click **Add New Webhook**
-4. Set Webhook URL to:
-   ```
-   https://YOUR-PROJECT.vercel.app/api/razorpay/webhook
-   ```
-5. Select these events:
-   - `payment_link.paid`
-   - `payment.captured`
-   - `order.paid`
-6. Set a Webhook Secret (any strong password)
-7. Save
+## Razorpay setup
 
-Now go to Vercel → Project Settings → Environment Variables:
-- Update `RAZORPAY_WEBHOOK_SECRET` to the exact secret you just set in Razorpay
-- Click **Redeploy** one more time
+There must be **two separate Razorpay Payment Pages**. Do not reuse the ₹99 page for counselling.
 
-Also update your Razorpay Payment Page success redirect URL to:
-```
-https://YOUR-PROJECT.vercel.app/success
-```
+### Toolkit Payment Page — ₹99
 
-### Counselling payment page (₹999 service)
+- Title: Punjab Ghar Toolkit
+- Amount: ₹99
+- Customer email: mandatory
+- Success redirect URL: `https://YOUR-DOMAIN/success`
+- Website environment variable: `NEXT_PUBLIC_RAZORPAY_PAYMENT_PAGE_URL`
 
-Create a separate Razorpay Payment Page titled `1-on-1 House Construction Counselling` for ₹999. Make email and phone mandatory and set its success redirect to:
+### Counselling Payment Page — ₹999
 
-```
-https://YOUR-PROJECT.vercel.app/counselling/success
-```
+- Title: 1-on-1 House Construction Counselling
+- Amount: ₹999
+- Customer email and phone: mandatory
+- Success redirect URL: `https://YOUR-DOMAIN/counselling/success`
+- Website environment variable: `NEXT_PUBLIC_RAZORPAY_COUNSELLING_PAYMENT_PAGE_URL`
+- Record the associated Razorpay `plink_...` identifier as `RAZORPAY_COUNSELLING_PAYMENT_LINK_ID`.
 
-Set its published URL as `NEXT_PUBLIC_RAZORPAY_COUNSELLING_PAYMENT_PAGE_URL`. Copy that page's `plink_...` payment-link ID from Razorpay's webhook/payment-link data into `RAZORPAY_COUNSELLING_PAYMENT_LINK_ID`. The webhook matches the exact ID and ₹99900, then records a `counselling_bookings` service row without generating a token or sending a toolkit delivery email.
+The success redirect controls only the browser page. The signed webhook is the authoritative payment-processing path.
 
-Run the updated `sql/supabase-schema.sql` in Supabase before accepting counselling payments; it adds the separate `counselling_bookings` table.
+### Webhook
 
----
+Create one Razorpay webhook:
 
-### Step 7 — Test end to end
+- URL: `https://YOUR-DOMAIN/api/razorpay/webhook`
+- Events: `payment_link.paid`, `payment.captured`, and `order.paid`
+- Secret: set a strong secret and copy the exact same value to `RAZORPAY_WEBHOOK_SECRET`.
 
-1. Open your live Vercel site
-2. Click "Kharido ₹99"
-3. Complete a real payment (or ask Razorpay support to enable test mode for Payment Pages)
-4. Check: Vercel → Project → Logs (should show webhook received)
-5. Check: Supabase → Table Editor → purchases (should show new row)
-6. Check: Resend → Emails (should show sent email)
-7. Open the email and click download link — all 3 files should download
+After creating or changing the webhook, redeploy Vercel after updating the environment variable. Use Razorpay’s webhook delivery logs to inspect failures.
 
-**If email does not arrive within 5 minutes, check:**
-- Vercel logs for errors
-- Razorpay Webhooks → Delivery Logs for webhook failures
-- Resend logs for bounced emails
-- Supabase purchases table — check if email_sent_at is filled
+## How payment processing works
 
----
+The webhook receives the raw Razorpay body, checks the `x-razorpay-signature` HMAC, parses the payload, and accepts only recognised success event/status combinations. This means a browser redirect alone cannot create a purchase or download.
 
-### How to manually resend email to a customer
+### Toolkit protection and idempotency
 
-If a customer paid but did not get the email, use this:
+- `razorpay_payment_id` is unique in `purchases`.
+- Duplicate webhook delivery does not create a second purchase.
+- `email_sent_at` is atomically claimed before an email is sent, preventing duplicate delivery emails in normal retry scenarios.
+- If email sending fails, `email_sent_at` is reset so a retry can send it later.
+- Tokens are random 48-character hexadecimal values and expire after 7 days.
+
+### Counselling protection
+
+- `razorpay_payment_id` is unique in `counselling_bookings`.
+- The matching payment-link ID and exact ₹999 amount are required.
+- A ₹999 event that does not contain the configured counselling link ID is ignored rather than being treated as a toolkit purchase.
+
+### Important limitation
+
+The webhook treats other successful payments that are not identified as counselling as toolkit purchases. Therefore, do **not** add another Razorpay product to this webhook without adding a separate, safe identification rule first.
+
+## Email and download delivery
+
+### Toolkit email
+
+`sendToolkitEmail` builds a secure URL using the website origin or `NEXT_PUBLIC_SITE_URL`, then sends it with Gmail SMTP. The link points to `/download/[token]`; it is not a direct public storage URL.
+
+### Download page
+
+The download page:
+
+- checks the token exists, belongs to a paid purchase, and has not expired;
+- increments `download_count` using the database function;
+- creates a fresh Supabase signed URL for each file; and
+- makes each signed URL valid for 15 minutes.
+
+If a customer needs a new email, use the protected admin route below rather than manually sharing private storage files.
+
+### Manual toolkit email resend
 
 ```bash
-curl -X POST https://YOUR-PROJECT.vercel.app/api/resend-email \
+curl -X POST https://YOUR-DOMAIN/api/resend-email \
   -H "Content-Type: application/json" \
   -H "x-admin-secret: YOUR_ADMIN_SECRET" \
-  -d '{"email": "customer@email.com"}'
+  -d '{"email":"customer@example.com"}'
 ```
 
-Replace `YOUR_ADMIN_SECRET` with the value you set in env variables.
+This route only works for the most recent paid toolkit purchase matching that email. It does not apply to counselling.
 
-Or use a tool like **Insomnia** or **Hoppscotch** (free REST API tools) to call this.
+## Database and storage
 
----
+### `purchases`
 
-### Files that contain your secrets (NEVER share or push to GitHub)
+Stores verified ₹99 toolkit purchases. It includes payment details, email/phone, secure token, token expiry, download counts, email-send status, and the raw Razorpay payload.
 
+### `counselling_bookings`
+
+Stores verified ₹999 counselling payments. It includes payment details, contact information, status, and raw payload. It intentionally has no token, file access, email-send state, or calendar data.
+
+### Storage bucket
+
+Keep `toolkit-files` private. The public should never receive permanent bucket URLs. Signed URLs are generated server-side only after a valid token is checked.
+
+## Daily operations
+
+### When a toolkit customer says they did not receive their files
+
+1. Ask for their purchase email and payment ID/screenshot.
+2. Check Razorpay payment and webhook delivery logs.
+3. Check Supabase `purchases` for the payment ID and `email_sent_at`.
+4. Check Gmail delivery/spam status.
+5. Use `/api/resend-email` if the purchase is verified and the address is correct.
+
+### When a counselling customer pays
+
+1. Check the `counselling_bookings` table or Razorpay payment record.
+2. The customer should use `/counselling/success` to open WhatsApp.
+3. Confirm date/time manually in WhatsApp.
+4. Keep any optional appointment notes outside this application; there is no scheduling database or calendar integration by design.
+
+### When a webhook fails
+
+1. Check Razorpay **Webhook Delivery Logs**.
+2. Check Vercel function logs for `/api/razorpay/webhook`.
+3. Confirm `RAZORPAY_WEBHOOK_SECRET` exactly matches Razorpay.
+4. Confirm Vercel has the required Supabase and Gmail variables.
+5. For counselling, verify the `plink_...` ID and ₹999 amount configuration.
+
+## Deployment and updating
+
+### Vercel deployment checklist
+
+1. Push the repository to GitHub.
+2. Import it into Vercel as a Next.js project.
+3. Add all required environment variables for Production (and Preview if you test there).
+4. Deploy.
+5. Set `NEXT_PUBLIC_SITE_URL` to the final production domain and redeploy.
+6. Configure the Razorpay redirects and webhook to use that same production domain.
+7. Test each flow separately with a real/test payment:
+   - ₹99: payment → webhook → Gmail email → token download;
+   - ₹999: payment → webhook → `counselling_bookings` → WhatsApp scheduling.
+
+### Checks before every release
+
+```bash
+npm run build
 ```
-.env.local          ← all secret keys for local testing
+
+If the environment blocks PowerShell scripts, use:
+
+```powershell
+npm.cmd run build
 ```
 
-The `.gitignore` already blocks this file from being pushed.
+For a quick TypeScript-only check:
 
----
-
-### Project structure
-
+```powershell
+.\node_modules\.bin\tsc.cmd --noEmit
 ```
-app/
-  page.tsx                    ← Main sales landing page
-  success/page.tsx            ← Page shown after payment
-  download/[token]/page.tsx   ← Secure download page
-  api/razorpay/webhook/       ← Receives payment from Razorpay
-  api/resend-email/           ← Manual email resend (admin only)
-  privacy-policy/             ← Policy pages
-  refund-policy/
-  terms/
-  contact/
 
-lib/
-  razorpay.ts                 ← Webhook verification + payment parsing
-  email.ts                    ← Email sending via Resend
-  supabaseAdmin.ts            ← Supabase server client
-  env.ts                      ← Environment variable helpers
+Do not commit `.env.local`, service-role keys, Gmail app passwords, webhook secrets, or `ADMIN_SECRET`.
 
-sql/
-  supabase-schema.sql         ← Run this once in Supabase SQL Editor
-```
+## Troubleshooting
+
+| Symptom | Most likely cause | What to check |
+| --- | --- | --- |
+| Toolkit payment succeeds but no email arrives | Webhook, Gmail, or missing email | Razorpay logs, Vercel logs, `purchases`, Gmail spam, `GMAIL_*` variables. |
+| Download page is 404 | Bad, expired, or unpaid token | `purchases.token`, `status`, and `token_expires_at`. |
+| Download button says file is not configured | Missing storage path/file or Supabase error | Bucket name, file path variables, private bucket contents. |
+| Counselling WhatsApp button is unavailable | Missing WhatsApp variable at build/deploy time | Set `NEXT_PUBLIC_SUPPORT_WHATSAPP` in Vercel and redeploy. |
+| WhatsApp opens to the wrong number | Number lacks/has wrong country code | Use digits only, normally `91` + 10-digit Indian number. |
+| Counselling payment is not in the table | Link ID does not match or webhook failure | `RAZORPAY_COUNSELLING_PAYMENT_LINK_ID`, Razorpay webhook logs, Vercel logs. |
+| ₹999 payment receives toolkit email | This should not happen | Stop and inspect webhook configuration/code immediately; do not process further payments until resolved. |
+| Webhook says invalid signature | Secrets differ or body was altered | Recopy the exact Razorpay webhook secret into Vercel, then redeploy. |
+
+## Safety rules for future changes
+
+1. Treat the ₹99 toolkit flow as production code. Test it end-to-end after any related change.
+2. Keep counselling and toolkit fulfilment separate. Counselling must never receive a token, signed file URL, or toolkit email.
+3. Never use the payment success redirect as payment verification. Only the signed Razorpay webhook is trusted.
+4. Never expose `SUPABASE_SERVICE_ROLE_KEY`, `GMAIL_APP_PASSWORD`, `RAZORPAY_WEBHOOK_SECRET`, or `ADMIN_SECRET` to the browser or Git.
+5. Keep the storage bucket private.
+6. Before adding another paid product, first add an explicit product identifier and a separate fulfilment path in the webhook. Do not rely only on price.
+7. When changing database schema, update `sql/supabase-schema.sql` and run the migration in production Supabase before deploying code that needs it.
+8. Preserve the two redirects: `/success` for ₹99 toolkit and `/counselling/success` for ₹999 counselling.
