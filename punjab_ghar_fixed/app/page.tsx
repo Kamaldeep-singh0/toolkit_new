@@ -21,6 +21,7 @@ const reviews = [
 
 export default function HomePage() {
   const paymentUrl = optionalEnv("NEXT_PUBLIC_RAZORPAY_PAYMENT_PAGE_URL", "#buy");
+  const counsellingPaymentUrl = optionalEnv("NEXT_PUBLIC_RAZORPAY_COUNSELLING_PAYMENT_PAGE_URL", "#counselling");
   const supportWhatsapp = optionalEnv("NEXT_PUBLIC_SUPPORT_WHATSAPP", "6283918770");
   const brand = optionalEnv("NEXT_PUBLIC_BRAND_NAME", "Punjab Ghar Toolkit");
 
@@ -34,7 +35,10 @@ export default function HomePage() {
             <small>For Punjab home builders</small>
           </span>
         </a>
-        <a className="top-buy" href={paymentUrl}>Buy ₹99</a>
+        <div className="top-actions">
+          <a className="top-counselling" href="#counselling">Counselling</a>
+          <a className="top-buy" href={paymentUrl}>Buy ₹99</a>
+        </div>
       </header>
 
       <main>
@@ -53,6 +57,7 @@ export default function HomePage() {
             <div className="cta-stack">
               <a className="btn btn-primary" href={paymentUrl}>Get the Toolkit — ₹99</a>
               <a className="btn btn-soft" href={`https://wa.me/${supportWhatsapp}`} target="_blank" rel="noopener noreferrer">Ask on WhatsApp</a>
+              <a className="btn btn-dark counselling-hero-cta" href={counsellingPaymentUrl}>Book 30-Minute Counselling — ₹999</a>
             </div>
           </div>
 
@@ -90,25 +95,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="section reviews-section">
-          <div className="section-heading">
-            <p className="pill">Reviews</p>
-            <h2>Loved by 100+ Home Builders & Planners</h2>
-            <p className="subtext">
-              Punjab Ghar Toolkit has been purchased by 100+ people who are planning or building their home.
-            </p>
-          </div>
-          <div className="review-grid">
-            {reviews.map((review) => (
-              <article className="review-card" key={review.buyer}>
-                <div className="stars" aria-label="5 star review">★★★★★</div>
-                <p>{review.text}</p>
-                <span>{review.buyer}</span>
-              </article>
-            ))}
-          </div>
-        </section>
-
         <section className="section offer" id="buy">
           <p className="pill">Launch price</p>
           <h2>All three for ₹99</h2>
@@ -127,6 +113,54 @@ export default function HomePage() {
           <p style={{ marginTop: 14, fontSize: 13, color: "#94a3b8" }}>
             Secure payment via Razorpay · UPI, cards, Net Banking accepted
           </p>
+        </section>
+
+        <section className="section counselling" id="counselling">
+          <div className="counselling-copy">
+            <p className="pill">Personal guidance session</p>
+            <h2>1-on-1 House Construction Counselling</h2>
+            <p className="subtext">
+              Building a house and confused about costs, materials, mistakes or what to do next? Get a personal 30-minute consultation where you can discuss your specific house-construction situation.
+            </p>
+            <div className="session-meta" aria-label="Counselling details">
+              <span>30 minutes</span>
+              <span>Personal 1-on-1 session</span>
+            </div>
+          </div>
+          <div className="counselling-card">
+            <p className="counselling-label">What we can discuss</p>
+            <ul className="counselling-list">
+              <li>Construction cost &amp; budgeting</li>
+              <li>Material quantities &amp; planning</li>
+              <li>Grey structure decisions</li>
+              <li>Seepage / DPC / waterproofing concerns</li>
+              <li>Finishing &amp; material decisions</li>
+              <li>Common construction mistakes</li>
+              <li>Current construction stage</li>
+              <li>General planning questions</li>
+            </ul>
+            <div className="counselling-price"><span>Session fee</span><strong>₹999</strong></div>
+            <a className="btn btn-primary counselling-cta" href={counsellingPaymentUrl}>Book 30-Minute Counselling — ₹999</a>
+            <p className="counselling-note">After payment, we’ll contact you to coordinate your session.</p>
+          </div>
+          <p className="counselling-disclaimer">This is an informational/personal guidance session based on the details you provide. It does not replace advice from a licensed architect, structural engineer, contractor, or other qualified professional where required.</p>
+        </section>
+
+        <section className="section reviews-section" aria-labelledby="counselling-reviews">
+          <div className="section-heading">
+            <p className="pill">Reviews</p>
+            <h2 id="counselling-reviews">What home builders say</h2>
+            <p className="subtext">Feedback from people planning and building their homes with Punjab Ghar guidance.</p>
+          </div>
+          <div className="review-grid">
+            {reviews.map((review) => (
+              <article className="review-card" key={review.buyer}>
+                <div className="stars" aria-label="5 star review">★★★★★</div>
+                <p>{review.text}</p>
+                <span>{review.buyer}</span>
+              </article>
+            ))}
+          </div>
         </section>
 
         <section className="section grid-2">

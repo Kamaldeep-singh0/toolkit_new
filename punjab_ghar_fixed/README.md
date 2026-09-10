@@ -82,7 +82,9 @@ Complete ₹99 digital product website with automatic payment verification and e
 5. In customer details, make **Email** mandatory
 6. Save/Publish the page
 7. Copy the Payment Page URL — it looks like `https://pages.razorpay.com/your-slug`
-8. This is your `NEXT_PUBLIC_RAZORPAY_PAYMENT_PAGE_URL`
+8. This is your `NEXT_PUBLIC_RAZORPAY_PAYMENT_PAGE_URL`.
+
+For counselling, create a second ₹999 Payment Page and use its URL for `NEXT_PUBLIC_RAZORPAY_COUNSELLING_PAYMENT_PAGE_URL`.
 
 ---
 
@@ -121,6 +123,7 @@ NEXT_PUBLIC_SUPPORT_WHATSAPP  → 919XXXXXXXXX  (your WhatsApp with country code
 NEXT_PUBLIC_SUPPORT_EMAIL     → your-email@gmail.com
 NEXT_PUBLIC_BRAND_NAME        → Punjab Ghar Toolkit
 RAZORPAY_WEBHOOK_SECRET       → (fill this after Step 6 below)
+RAZORPAY_COUNSELLING_PAYMENT_LINK_ID → plink_xxx for the ₹999 counselling page
 NEXT_PUBLIC_SUPABASE_URL      → https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY     → your_supabase_service_role_key
 SUPABASE_STORAGE_BUCKET       → toolkit-files
@@ -167,6 +170,18 @@ Also update your Razorpay Payment Page success redirect URL to:
 ```
 https://YOUR-PROJECT.vercel.app/success
 ```
+
+### Counselling payment page (₹999 service)
+
+Create a separate Razorpay Payment Page titled `1-on-1 House Construction Counselling` for ₹999. Make email and phone mandatory and set its success redirect to:
+
+```
+https://YOUR-PROJECT.vercel.app/counselling/success
+```
+
+Set its published URL as `NEXT_PUBLIC_RAZORPAY_COUNSELLING_PAYMENT_PAGE_URL`. Copy that page's `plink_...` payment-link ID from Razorpay's webhook/payment-link data into `RAZORPAY_COUNSELLING_PAYMENT_LINK_ID`. The webhook matches the exact ID and ₹99900, then records a `counselling_bookings` service row without generating a token or sending a toolkit delivery email.
+
+Run the updated `sql/supabase-schema.sql` in Supabase before accepting counselling payments; it adds the separate `counselling_bookings` table.
 
 ---
 
@@ -238,4 +253,3 @@ lib/
 sql/
   supabase-schema.sql         ← Run this once in Supabase SQL Editor
 ```
-

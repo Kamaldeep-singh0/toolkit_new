@@ -24,8 +24,26 @@ create table if not exists public.purchases (
 create index if not exists idx_purchases_token on public.purchases(token);
 create index if not exists idx_purchases_email on public.purchases(email);
 
+-- Separate service records. These rows have no token, no download count and no
+-- digital-delivery email because counselling is a booked guidance session.
+create table if not exists public.counselling_bookings (
+  id uuid primary key default gen_random_uuid(),
+  razorpay_payment_id text not null unique,
+  razorpay_order_id text,
+  email text,
+  phone text,
+  amount_paise integer not null,
+  currency text default 'INR',
+  status text not null default 'paid',
+  raw_payload jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_counselling_bookings_email on public.counselling_bookings(email);
+
 -- Keep RLS enabled for safety. The app uses the service-role key only on the server.
 alter table public.purchases enable row level security;
+alter table public.counselling_bookings enable row level security;
 
 -- No public policies are created intentionally.
 

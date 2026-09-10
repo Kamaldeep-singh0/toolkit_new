@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   extractPaymentData,
+  isCounsellingAmount,
+  isCounsellingPayment,
   isSuccessfulPaymentEvent,
   RazorpayWebhookPayload,
   verifyRazorpayWebhook
@@ -55,6 +57,38 @@ export async function POST(request: NextRequest) {
 
   if (!data.paymentId) {
     return NextResponse.json({ ok: false, error: "Missing payment id in webhook payload" }, { status: 400 });
+  }
+
+  // Counselling has its own Razorpay payment link and its own database table.
+  // It must never enter the toolkit token/email fulfilment flow below.
+  if (isCounsellingPayment(data.paymentLinkId, data.amount)) {
+    const { error } = await supabaseAdmin
+      .from("counselling_bookings")
+      .upsert(
+        {
+          razorpay_payment_id: data.paymentId,
+          razorpay_order_id: data.orderId,
+          email: data.email,
+          phone: data.contact,
+          amount_paise: data.amount,
+          currency: data.currency,
+          status: "paid",
+          raw_payload: payload
+        },
+        { onConflict: "razorpay_payment_id", ignoreDuplicates: true }
+      );
+
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, service: "counselling" });
+  }
+
+  // A ₹999 payment can never fall through to digital toolkit fulfilment. The
+  // payment-link webhook will retry with its ID once Razorpay sends that event.
+  if (isCounsellingAmount(data.amount)) {
+    return NextResponse.json({ ok: true, ignored: true, reason: "Counselling payment link not identified" });
   }
 
   if (!data.email) {

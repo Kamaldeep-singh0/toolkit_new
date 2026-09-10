@@ -78,9 +78,12 @@ export function extractPaymentData(payload: RazorpayWebhookPayload) {
     readString(order.status) ||
     "unknown";
 
+  const paymentLinkId = readString(paymentLink.id);
+
   return {
     event,
     paymentId,
+    paymentLinkId,
     orderId,
     email,
     contact,
@@ -88,6 +91,24 @@ export function extractPaymentData(payload: RazorpayWebhookPayload) {
     currency,
     status
   };
+}
+
+/**
+ * Counselling is intentionally identified by its own Razorpay payment link,
+ * never by the amount alone. This keeps the toolkit fulfilment path isolated.
+ */
+export function isCounsellingPayment(paymentLinkId: string | null, amount: number | null): boolean {
+  const counsellingLinkId = process.env.RAZORPAY_COUNSELLING_PAYMENT_LINK_ID;
+
+  return Boolean(
+    counsellingLinkId &&
+    paymentLinkId === counsellingLinkId &&
+    isCounsellingAmount(amount)
+  );
+}
+
+export function isCounsellingAmount(amount: number | null): boolean {
+  return amount === Number(process.env.RAZORPAY_COUNSELLING_AMOUNT_PAISE || "99900");
 }
 
 // FIX: Use AND (&&) not OR (||)
